@@ -18,6 +18,12 @@ Parameters:
       - 'host'
     Default: bridge
     Description: ECS Network Mode for the Task
+  SchedulingStrategy:
+    Type: String
+    AllowedValues:
+      - 'REPLICA'
+      - 'DAEMON'
+    Description: Choose either REPLICA or DAEMON scheduling strategy
   TaskRoleName:
     Type: String
     Description: Enter the CloudWatch Agent ECS task role name
@@ -29,6 +35,7 @@ Conditions:
     Fn::Equals:
       - Ref: CreateIAMRoles
       - 'True'
+  SchedulingStrategyReplica: !Equals [ !Ref SchedulingStrategy, 'REPLICA' ]
 Resources:
   PrometheusConfigSSMParameter:
     Type: AWS::SSM::Parameter
@@ -246,8 +253,8 @@ Resources:
     DependsOn: ECSCWAgentTaskDefinition
     Properties:
       Cluster: !Ref ECSClusterName
-      DesiredCount: 1
+      DesiredCount: !If [ SchedulingStrategyReplica, 1, !Ref 'AWS::NoValue' ]
       LaunchType: EC2
-      SchedulingStrategy: REPLICA
+      SchedulingStrategy: !Sub '${SchedulingStrategy}'
       ServiceName: !Sub 'cwagent-prometheus-replica-service-EC2-${ECSNetworkMode}'
       TaskDefinition: !Ref ECSCWAgentTaskDefinition
